@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>소수 등차수열 탐색기</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600;700&family=JetBrains+Mono:wght@300;400;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --gold: #c9a84c;
+    --gold-light: #e8c96e;
+    --gold-dim: #7a6030;
+    --cream: #f0e8d0;
+    --cream-dim: #a09070;
+    --teal: #4ecdc4;
+    --teal-dim: #2a6e6a;
+    --border: rgba(201,168,76,0.2);
+    --border-bright: rgba(201,168,76,0.5);
+    --glow: 0 0 30px rgba(201,168,76,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--cream);
+    font-family: 'Noto Serif KR', serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(201,168,76,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(201,168,76,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .particle {
+    position: fixed;
+    width: 2px; height: 2px;
+    background: var(--gold);
+    border-radius: 50%;
+    opacity: 0;
+    animation: floatUp 8s infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+  @keyframes floatUp {
+    0%   { opacity: 0; transform: translateY(0) scale(1); }
+    20%  { opacity: 0.6; }
+    80%  { opacity: 0.3; }
+    100% { opacity: 0; transform: translateY(-100vh) scale(0.5); }
+  }
+
+  .screen {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+  .screen.active { display: flex; }
+
+  /* ── SCREEN 1 ── */
+  #screen1 {
+    background: radial-gradient(ellipse at 50% 30%, rgba(201,168,76,0.08) 0%, transparent 60%);
+  }
+
+  .title-block {
+    text-align: center;
+    margin-bottom: 48px;
+    animation: fadeInDown 0.8s ease forwards;
+  }
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    opacity: 0.8;
+  }
+
+  /* 타이틀: 정자체 bold, 기울기 없음 */
+  .main-title {
+    font-family: 'Noto Serif KR', serif;
+    font-weight: 700;
+    font-style: normal;
+    font-size: clamp(2rem, 5vw, 3.4rem);
+    color: var(--cream);
+    line-height: 1.2;
+    margin-bottom: 16px;
+  }
+  .main-title .accent {
+    color: var(--gold-light);
+    font-style: normal;
+    font-weight: 700;
+  }
+
+  .ornament {
+    font-size: 1.2rem;
+    color: var(--gold-dim);
+    margin: 20px 0;
+    letter-spacing: 12px;
+    animation: fadeInDown 0.8s 0.2s ease both;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+    color: var(--cream-dim);
+    line-height: 1.6;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+
+  /* Input card */
+  .input-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 44px 52px;
+    max-width: 560px;
+    width: 100%;
+    box-shadow: var(--glow), 0 20px 60px rgba(0,0,0,0.5);
+    animation: fadeInUp 0.8s 0.3s ease both;
+    position: relative;
+    overflow: hidden;
+  }
+  .input-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  /* ── 질문 섹션 공통 ── */
+  .question-section {
+    margin-bottom: 28px;
+  }
+  .question-section + .question-section {
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+
+  .question-label {
+    font-size: 1rem;
+    color: var(--cream);
+    line-height: 1.6;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .question-label .hl { color: var(--gold-light); font-weight: 700; }
+
+  /* 항 수 입력 */
+  .number-input-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 12px;
+  }
+  .num-btn {
+    width: 40px; height: 40px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--gold);
+    font-size: 1.3rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .num-btn:hover { background: var(--gold-dim); border-color: var(--gold); color: var(--cream); }
+  .num-btn:active { transform: scale(0.95); }
+
+  #lengthInput {
+    width: 80px;
+    background: var(--surface2);
+    border: 1px solid var(--border-bright);
+    border-radius: 2px;
+    color: var(--cream);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.8rem;
+    text-align: center;
+    padding: 6px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  #lengthInput:focus { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,168,76,0.2); }
+  #lengthInput::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+  .preset-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .preset-btn {
+    padding: 5px 14px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--cream-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .preset-btn:hover { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.05); }
+  .preset-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.1); }
+
+  /* 포함 소수 입력 */
+  .include-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+  }
+  #includeInput {
+    width: 130px;
+    background: var(--surface2);
+    border: 1px solid var(--border-bright);
+    border-radius: 2px;
+    color: var(--cream);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.5rem;
+    text-align: center;
+    padding: 8px 10px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  #includeInput:focus { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,168,76,0.2); }
+  #includeInput::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .include-hint {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--cream-dim);
+    text-align: center;
+    margin-top: 8px;
+  }
+
+  /* 탐색 버튼 */
+  .search-btn {
+    width: 100%;
+    margin-top: 28px;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+    border: none;
+    border-radius: 2px;
+    color: var(--bg);
+    font-family: 'Noto Serif KR', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    letter-spacing: 1px;
+    position: relative;
+    overflow: hidden;
+  }
+  .search-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(201,168,76,0.3); }
+  .search-btn:active { transform: translateY(0); }
+
+  /* ── SCREEN 2 ── */
+  #screen2 { padding: 40px 24px; align-items: stretch; }
+
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    max-width: 960px;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    animation: fadeInDown 0.5s ease;
+  }
+
+  .back-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--cream-dim);
+    font-family: 'Noto Serif KR', serif;
+    font-size: 0.85rem;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .back-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+  .results-title {
+    font-family: 'Noto Serif KR', serif;
+    font-weight: 700;
+    font-size: 1.4rem;
+    color: var(--cream);
+    text-align: center;
+    flex: 1;
+    padding: 0 12px;
+  }
+  .results-title .hl { color: var(--gold-light); }
+
+  .results-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--cream-dim);
+    text-align: right;
+    min-width: 100px;
+  }
+
+  .loading-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 80px;
+  }
+  .spinner {
+    width: 44px; height: 44px;
+    border: 2px solid var(--surface2);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--gold-dim);
+    letter-spacing: 2px;
+  }
+
+  .sequences-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    max-width: 960px;
+    width: 100%;
+    margin: 0 auto;
+    animation: fadeInUp 0.5s ease;
+  }
+
+  .seq-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 18px 22px;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+  .seq-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(201,168,76,0.05), transparent);
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+  .seq-card:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .seq-card:hover::before { opacity: 1; }
+
+  .seq-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .seq-index {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--gold-dim);
+    letter-spacing: 1px;
+  }
+  .seq-diff {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.73rem;
+    background: rgba(201,168,76,0.1);
+    border: 1px solid rgba(201,168,76,0.3);
+    color: var(--gold);
+    padding: 2px 8px;
+    border-radius: 2px;
+  }
+  .seq-numbers { display: flex; flex-wrap: wrap; gap: 5px; }
+  .seq-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--cream);
+    background: var(--surface2);
+    border: 1px solid rgba(255,255,255,0.07);
+    padding: 3px 9px;
+    border-radius: 2px;
+    transition: background 0.2s;
+  }
+  /* 포함 소수 강조 */
+  .seq-num.highlight {
+    background: rgba(201,168,76,0.2);
+    border-color: var(--gold);
+    color: var(--gold-light);
+    font-weight: 600;
+  }
+  .seq-card:hover .seq-num { background: rgba(201,168,76,0.08); }
+  .seq-hint {
+    font-size: 0.7rem;
+    color: var(--teal-dim);
+    margin-top: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: all 0.2s;
+  }
+  .seq-card:hover .seq-hint { opacity: 1; transform: translateY(0); color: var(--teal); }
+
+  .empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--cream-dim);
+  }
+  .empty-state .icon { font-size: 3rem; margin-bottom: 16px; opacity: 0.4; }
+
+  /* ── SCREEN 3 ── */
+  #screen3 { padding: 40px 24px; }
+
+  .graph-container { max-width: 900px; width: 100%; animation: fadeInUp 0.5s ease; }
+
+  .graph-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .graph-info { text-align: center; flex: 1; }
+  .graph-info h2 {
+    font-family: 'Noto Serif KR', serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: var(--cream);
+    margin-bottom: 4px;
+  }
+  .graph-info .formula {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--gold);
+  }
+
+  .graph-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 32px;
+    box-shadow: var(--glow);
+    position: relative;
+    overflow: hidden;
+  }
+  .graph-panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--teal), transparent);
+  }
+
+  #graphCanvas { width: 100%; display: block; border-radius: 2px; }
+
+  .graph-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 18px;
+  }
+  .stat-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .stat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--cream-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.25rem;
+    color: var(--gold-light);
+  }
+
+  .seq-display-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px;
+    justify-content: center;
+  }
+  .seq-pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    background: rgba(78,205,196,0.1);
+    border: 1px solid rgba(78,205,196,0.3);
+    color: var(--teal);
+    padding: 5px 14px;
+    border-radius: 20px;
+    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+  }
+  .seq-pill.highlight-pill {
+    background: rgba(201,168,76,0.18);
+    border-color: var(--gold);
+    color: var(--gold-light);
+    font-weight: 700;
+  }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.7); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  @media (max-width: 600px) {
+    .input-card { padding: 28px 20px; }
+    .graph-panel { padding: 16px 12px; }
+    .graph-stats { grid-template-columns: 1fr 1fr; }
+    .results-header { flex-wrap: wrap; gap: 10px; }
+    .results-title { font-size: 1.1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div id="particles"></div>
+
+<!-- ═══════════════ SCREEN 1 ═══════════════ -->
+<section class="screen active" id="screen1">
+  <div class="title-block">
+    <div class="eyebrow">수론 탐색기 · Number Theory Explorer</div>
+    <h1 class="main-title">소수로 이루어진<br><span class="accent">등차수열</span> 탐색</h1>
+    <div class="ornament">✦ ✦ ✦</div>
+    <p class="subtitle">소수(Prime Number)만으로 구성된 등차수열을 탐색하고 시각화합니다.</p>
+  </div>
+
+  <div class="input-card">
+
+    <!-- Q1: 항의 수 -->
+    <div class="question-section">
+      <p class="question-label">
+        몇 개의 소수로 이루어진<br><span class="hl">등차수열</span>을 찾고 계신가요?
+      </p>
+      <div class="number-input-wrap">
+        <button class="num-btn" onclick="adjustLength(-1)">−</button>
+        <input type="number" id="lengthInput" value="3" min="2" max="20">
+        <button class="num-btn" onclick="adjustLength(1)">+</button>
+      </div>
+      <div class="preset-row">
+        <button class="preset-btn active" onclick="setPreset(3,this)">3개</button>
+        <button class="preset-btn" onclick="setPreset(4,this)">4개</button>
+        <button class="preset-btn" onclick="setPreset(5,this)">5개</button>
+        <button class="preset-btn" onclick="setPreset(6,this)">6개</button>
+      </div>
+    </div>
+
+    <!-- Q2: 포함 소수 -->
+    <div class="question-section">
+      <p class="question-label">
+        어떤 소수가 포함된<br><span class="hl">등차수열</span>을 찾으시나요?
+      </p>
+      <div class="include-wrap">
+        <input type="number" id="includeInput" placeholder="–" min="2">
+      </div>
+      <p class="include-hint">특정 소수를 포함하는 수열만 찾습니다 (비워두면 전체 탐색)</p>
+    </div>
+
+    <button class="search-btn" onclick="startSearch()">탐색 시작하기 →</button>
+  </div>
+</section>
+
+<!-- ═══════════════ SCREEN 2 ═══════════════ -->
+<section class="screen" id="screen2">
+  <div class="results-header">
+    <button class="back-btn" onclick="goBack(2)">← 돌아가기</button>
+    <div class="results-title" id="resultsTitle">소수 등차수열</div>
+    <div class="results-count" id="resultsCount"></div>
+  </div>
+  <div id="resultsArea" style="width:100%; max-width:960px; margin:0 auto;"></div>
+</section>
+
+<!-- ═══════════════ SCREEN 3 ═══════════════ -->
+<section class="screen" id="screen3">
+  <div class="graph-container">
+    <div class="graph-header">
+      <button class="back-btn" onclick="goBack(3)">← 목록으로</button>
+      <div class="graph-info">
+        <h2 id="graphTitle">등차수열 그래프</h2>
+        <div class="formula" id="graphFormula"></div>
+      </div>
+      <div style="min-width:100px;"></div>
+    </div>
+    <div class="graph-panel">
+      <canvas id="graphCanvas"></canvas>
+    </div>
+    <div class="graph-stats" id="graphStats"></div>
+    <div class="seq-display-bar" id="seqPills"></div>
+  </div>
+</section>
+
+<script>
+// ── Particles
+const pWrap = document.getElementById('particles');
+for (let i = 0; i < 20; i++) {
+  const p = document.createElement('div');
+  p.className = 'particle';
+  p.style.left = Math.random() * 100 + 'vw';
+  p.style.bottom = '-10px';
+  p.style.animationDelay = Math.random() * 8 + 's';
+  p.style.animationDuration = (6 + Math.random() * 6) + 's';
+  pWrap.appendChild(p);
+}
+
+// ── State
+let currentLength = 3;
+let foundSequences = [];
+let currentGraphItem = null;
+
+// ── Miller-Rabin 소수 판별 (큰 수 지원)
+function millerRabin(n, a) {
+  if (n % a === 0) return n === a;
+  let d = n - 1, r = 0;
+  while (d % 2 === 0) { d /= 2; r++; }
+  let x = modPow(a, d, n);
+  if (x === 1 || x === n - 1) return true;
+  for (let i = 0; i < r - 1; i++) {
+    x = modMul(x, x, n);
+    if (x === n - 1) return true;
+  }
+  return false;
+}
+
+function modPow(base, exp, mod) {
+  let result = 1n;
+  base = BigInt(base) % BigInt(mod);
+  exp = BigInt(exp);
+  mod = BigInt(mod);
+  while (exp > 0n) {
+    if (exp % 2n === 1n) result = result * base % mod;
+    exp >>= 1n;
+    base = base * base % mod;
+  }
+  return Number(result);
+}
+
+function modMul(a, b, m) {
+  return Number(BigInt(a) * BigInt(b) % BigInt(m));
+}
+
+function isPrime(n) {
+  if (n < 2) return false;
+  if (n < 4) return true;
+  if (n % 2 === 0 || n % 3 === 0) return false;
+  if (n < 9) return true;
+  // deterministic for n < 3,215,031,751
+  for (const a of [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37]) {
+    if (n === a) return true;
+    if (!millerRabin(n, a)) return false;
+  }
+  return true;
+}
+
+// ── 등차수열 탐색
+// 범위: a 최대 5000, d 최대 3000, 단 포함 소수 지정 시 해당 소수 기준 탐색
+function findSequences(length, mustInclude) {
+  const results = [];
+  const MAX_A = 5000;
+  const MAX_D = 3000;
+
+  if (mustInclude !== null) {
+    // mustInclude가 포함되어야 함
+    // mustInclude = a + k*d (k=0,1,...,length-1)
+    // k번째 항이 mustInclude라면: a = mustInclude - k*d
+    const seen = new Set();
+    for (let d = 1; d <= MAX_D; d++) {
+      for (let k = 0; k < length; k++) {
+        const a = mustInclude - k * d;
+        if (a < 2) continue;
+        const key = a + ',' + d;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        let valid = true;
+        const seq = [];
+        for (let j = 0; j < length; j++) {
+          const num = a + j * d;
+          if (!isPrime(num)) { valid = false; break; }
+          seq.push(num);
+        }
+        if (valid) results.push({ a, d, seq });
+      }
+    }
+    // a 기준 정렬
+    results.sort((x, y) => x.a - y.a || x.d - y.d);
+  } else {
+    for (let a = 2; a <= MAX_A; a++) {
+      for (let d = 1; d <= MAX_D; d++) {
+        let valid = true;
+        const seq = [];
+        for (let k = 0; k < length; k++) {
+          const num = a + k * d;
+          if (!isPrime(num)) { valid = false; break; }
+          seq.push(num);
+        }
+        if (valid) results.push({ a, d, seq });
+      }
+    }
+  }
+  return results;
+}
+
+// ── UI helpers
+function showScreen(n) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen' + n).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function adjustLength(delta) {
+  const inp = document.getElementById('lengthInput');
+  const val = Math.max(2, Math.min(20, parseInt(inp.value || 3) + delta));
+  inp.value = val;
+  currentLength = val;
+  document.querySelectorAll('.preset-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.textContent) === val);
+  });
+}
+
+function setPreset(val, btn) {
+  document.getElementById('lengthInput').value = val;
+  currentLength = val;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+document.getElementById('lengthInput').addEventListener('input', function() {
+  currentLength = parseInt(this.value) || 3;
+  document.querySelectorAll('.preset-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.textContent) === currentLength);
+  });
+});
+
+// ── Search
+function startSearch() {
+  const length = Math.max(2, parseInt(document.getElementById('lengthInput').value) || 3);
+  currentLength = length;
+  const incVal = document.getElementById('includeInput').value.trim();
+  let mustInclude = null;
+
+  if (incVal !== '') {
+    const v = parseInt(incVal);
+    if (!isPrime(v)) {
+      alert(`${v}는 소수가 아닙니다.\n소수를 입력하거나 비워두세요.`);
+      return;
+    }
+    mustInclude = v;
+  }
+
+  showScreen(2);
+
+  let titleHTML;
+  if (mustInclude !== null) {
+    titleHTML = `<span class="hl">${length}개</span> 소수 등차수열 (포함: <span class="hl">${mustInclude}</span>)`;
+  } else {
+    titleHTML = `<span class="hl">${length}개</span>의 소수 등차수열`;
+  }
+  document.getElementById('resultsTitle').innerHTML = titleHTML;
+  document.getElementById('resultsCount').textContent = '';
+  document.getElementById('resultsArea').innerHTML = `
+    <div class="loading-wrap">
+      <div class="spinner"></div>
+      <div class="loading-text">SEARCHING PRIMES...</div>
+    </div>`;
+
+  setTimeout(() => {
+    foundSequences = findSequences(length, mustInclude);
+    renderResults(foundSequences, mustInclude);
+  }, 60);
+}
+
+function renderResults(seqs, mustInclude) {
+  document.getElementById('resultsCount').textContent = `총 ${seqs.length}개 발견`;
+
+  if (seqs.length === 0) {
+    document.getElementById('resultsArea').innerHTML = `
+      <div class="empty-state">
+        <div class="icon">∅</div>
+        <p>조건을 만족하는 등차수열이 없습니다.</p>
+      </div>`;
+    return;
+  }
+
+  const grid = document.createElement('div');
+  grid.className = 'sequences-grid';
+
+  seqs.forEach((item, idx) => {
+    const card = document.createElement('div');
+    card.className = 'seq-card';
+    card.style.animation = 'fadeInUp 0.4s ease both';
+    card.style.animationDelay = Math.min(idx * 0.03, 0.8) + 's';
+
+    const numsHtml = item.seq.map(n => {
+      const isHL = mustInclude !== null && n === mustInclude;
+      return `<span class="seq-num${isHL ? ' highlight' : ''}">${n}</span>`;
+    }).join('');
+
+    card.innerHTML = `
+      <div class="seq-meta">
+        <span class="seq-index">#${String(idx+1).padStart(3,'0')}</span>
+        <span class="seq-diff">공차 d = ${item.d}</span>
+      </div>
+      <div class="seq-numbers">${numsHtml}</div>
+      <div class="seq-hint">📈 클릭하여 그래프 보기</div>`;
+
+    card.onclick = () => showGraph(item, mustInclude);
+    grid.appendChild(card);
+  });
+
+  document.getElementById('resultsArea').innerHTML = '';
+  document.getElementById('resultsArea').appendChild(grid);
+}
+
+// ── Graph
+function showGraph(item, mustInclude) {
+  currentGraphItem = item;
+  showScreen(3);
+
+  document.getElementById('graphTitle').textContent = `초항 ${item.a},  공차 ${item.d}`;
+
+  // 수식: y = dx - d + a
+  const dVal = item.d, aVal = item.a;
+  const intercept = aVal - dVal;  // -d + a
+  let formulaStr;
+  if (intercept === 0) {
+    formulaStr = `y = ${dVal}x`;
+  } else if (intercept > 0) {
+    formulaStr = `y = ${dVal}x + ${intercept}`;
+  } else {
+    formulaStr = `y = ${dVal}x - ${Math.abs(intercept)}`;
+  }
+  document.getElementById('graphFormula').textContent = formulaStr;
+
+  document.getElementById('graphStats').innerHTML = `
+    <div class="stat-box">
+      <div class="stat-label">초항 (a)</div>
+      <div class="stat-value">${item.a}</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">공차 (d)</div>
+      <div class="stat-value">${item.d}</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">항의 수</div>
+      <div class="stat-value">${item.seq.length}</div>
+    </div>`;
+
+  const pills = item.seq.map((n, i) => {
+    const isHL = mustInclude !== null && n === mustInclude;
+    return `<span class="seq-pill${isHL ? ' highlight-pill' : ''}" style="animation-delay:${i*0.08}s">${n}</span>`;
+  }).join('');
+  document.getElementById('seqPills').innerHTML = pills;
+
+  drawGraph(item, mustInclude);
+}
+
+function drawGraph(item, mustInclude) {
+  const canvas = document.getElementById('graphCanvas');
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.clientWidth - 64;
+  const H = Math.min(420, window.innerHeight * 0.45);
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const PAD = { top: 36, right: 36, bottom: 52, left: 70 };
+  const CW = W - PAD.left - PAD.right;
+  const CH = H - PAD.top - PAD.bottom;
+
+  ctx.fillStyle = '#0d0d16';
+  ctx.fillRect(0, 0, W, H);
+
+  const n = item.seq.length;
+  const maxVal = item.seq[n - 1];
+  const minVal = 0;
+  const yRange = maxVal * 1.12 - minVal;
+
+  // Grid
+  ctx.strokeStyle = 'rgba(201,168,76,0.06)';
+  ctx.lineWidth = 1;
+  for (let g = 0; g <= 5; g++) {
+    const y = PAD.top + (g / 5) * CH;
+    ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + CW, y); ctx.stroke();
+  }
+  for (let g = 0; g <= n + 1; g++) {
+    const x = PAD.left + (g / (n + 1)) * CW;
+    ctx.beginPath(); ctx.moveTo(x, PAD.top); ctx.lineTo(x, PAD.top + CH); ctx.stroke();
+  }
+
+  // Axes
+  ctx.strokeStyle = 'rgba(201,168,76,0.3)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(PAD.left, PAD.top);
+  ctx.lineTo(PAD.left, PAD.top + CH);
+  ctx.lineTo(PAD.left + CW, PAD.top + CH);
+  ctx.stroke();
+
+  function toX(k) { return PAD.left + (k / (n + 1)) * CW; }
+  function toY(v) { return PAD.top + CH - ((v - minVal) / yRange) * CH; }
+
+  // Y-axis labels
+  ctx.fillStyle = '#7a6030';
+  ctx.font = '11px JetBrains Mono, monospace';
+  ctx.textAlign = 'right';
+  for (let g = 0; g <= 4; g++) {
+    const val = Math.round(minVal + (g / 4) * maxVal * 1.12);
+    const y = PAD.top + CH - (g / 4) * CH;
+    ctx.fillText(val, PAD.left - 8, y + 4);
+  }
+
+  // X-axis labels
+  ctx.textAlign = 'center';
+  for (let k = 1; k <= n; k++) {
+    const x = toX(k);
+    ctx.fillText(k, x, PAD.top + CH + 18);
+  }
+
+  // Axis titles
+  ctx.fillStyle = '#a09070';
+  ctx.font = '11px Noto Serif KR, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('항의 순서 (x)', PAD.left + CW / 2, H - 6);
+  ctx.save();
+  ctx.translate(14, PAD.top + CH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('값 (y)', 0, 0);
+  ctx.restore();
+
+  // Regression / formula line  y = d*x + (a - d)
+  const x1c = toX(0.3), y1c = toY(item.d * 0.3 + (item.a - item.d));
+  const x2c = toX(n + 0.7), y2c = toY(item.d * (n + 0.7) + (item.a - item.d));
+  const lineGrad = ctx.createLinearGradient(x1c, 0, x2c, 0);
+  lineGrad.addColorStop(0, 'rgba(78,205,196,0.12)');
+  lineGrad.addColorStop(0.5, 'rgba(78,205,196,0.45)');
+  lineGrad.addColorStop(1, 'rgba(78,205,196,0.12)');
+  ctx.strokeStyle = lineGrad;
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([5, 4]);
+  ctx.beginPath();
+  ctx.moveTo(x1c, y1c);
+  ctx.lineTo(x2c, y2c);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Fill under
+  const fillGrad = ctx.createLinearGradient(0, PAD.top, 0, PAD.top + CH);
+  fillGrad.addColorStop(0, 'rgba(78,205,196,0.07)');
+  fillGrad.addColorStop(1, 'rgba(78,205,196,0)');
+  ctx.fillStyle = fillGrad;
+  ctx.beginPath();
+  ctx.moveTo(toX(1), PAD.top + CH);
+  for (let k = 1; k <= n; k++) ctx.lineTo(toX(k), toY(item.seq[k-1]));
+  ctx.lineTo(toX(n), PAD.top + CH);
+  ctx.closePath();
+  ctx.fill();
+
+  // Connect dots
+  ctx.strokeStyle = 'rgba(201,168,76,0.7)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let k = 1; k <= n; k++) {
+    const cx = toX(k), cy = toY(item.seq[k-1]);
+    if (k === 1) ctx.moveTo(cx, cy); else ctx.lineTo(cx, cy);
+  }
+  ctx.stroke();
+
+  // Dots
+  for (let k = 1; k <= n; k++) {
+    const v = item.seq[k-1];
+    const cx = toX(k), cy = toY(v);
+    const isHL = mustInclude !== null && v === mustInclude;
+
+    // Glow
+    const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, isHL ? 22 : 16);
+    grd.addColorStop(0, isHL ? 'rgba(232,201,110,0.4)' : 'rgba(201,168,76,0.22)');
+    grd.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(cx, cy, isHL ? 22 : 16, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Outer ring for highlight
+    if (isHL) {
+      ctx.strokeStyle = 'rgba(232,201,110,0.8)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = isHL ? '#e8c96e' : '#c9a84c';
+    ctx.beginPath();
+    ctx.arc(cx, cy, isHL ? 6 : 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#0a0a0f';
+    ctx.beginPath();
+    ctx.arc(cx, cy, isHL ? 3 : 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Label
+    ctx.fillStyle = isHL ? '#e8c96e' : '#c9a84c';
+    ctx.font = `${isHL ? 'bold ' : ''}12px JetBrains Mono, monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(v, cx, cy - (isHL ? 18 : 14));
+  }
+}
+
+// ── Navigation
+function goBack(from) {
+  if (from === 2) showScreen(1);
+  else if (from === 3) showScreen(2);
+}
+
+// Redraw on resize
+window.addEventListener('resize', () => {
+  if (document.getElementById('screen3').classList.contains('active') && currentGraphItem) {
+    const incVal = document.getElementById('includeInput').value.trim();
+    const mustInclude = incVal !== '' ? parseInt(incVal) : null;
+    drawGraph(currentGraphItem, mustInclude);
+  }
+});
+</script>
+</body>
+</html>
